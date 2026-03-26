@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高标准农田智慧监管平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root{--bg:#f0f2f5;--white:#fff;--primary:#1677ff;--pl:#e6f4ff;--pd:#0958d9;--success:#52c41a;--sl:#f6ffed;--warn:#faad14;--wl:#fffbe6;--danger:#ff4d4f;--dl:#fff2f0;--text:#1f1f1f;--ts:#8c8c8c;--border:#e8e8e8;--shadow:0 2px 8px rgba(0,0,0,.06);--r:8px}
+        *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif}
+        ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#d9d9d9;border-radius:3px}
+        body{background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+        .auth-page{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center}
+        .auth-page.hidden{opacity:0;pointer-events:none;transition:.5s}
+        .auth-bg{position:absolute;inset:0;background:linear-gradient(135deg,#0c1426,#1a365d 40%,#2d5016 70%,#1a365d)}
+        #particleCanvas{position:absolute;inset:0;z-index:1}
+        .auth-container{width:440px;background:rgba(255,255,255,.95);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;z-index:10;backdrop-filter:blur(20px)}
+        .auth-header{background:linear-gradient(135deg,#1677ff,#4096ff);padding:36px 30px 28px;text-align:center;color:#fff}
+        .auth-header h1{font-size:22px;margin-bottom:8px}.auth-header p{font-size:13px;opacity:.85}
+        .auth-body{padding:28px 30px}
+        .auth-tabs{display:flex;margin-bottom:20px;border-bottom:2px solid var(--border)}
+        .auth-tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:15px;font-weight:600;color:var(--ts);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.3s}
+        .auth-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+        .fg{margin-bottom:14px}.fg label{display:block;margin-bottom:5px;font-size:13px;color:var(--ts)}
+        .fi{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;outline:none;transition:.3s}
+        .fi:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(22,119,255,.1)}
+        .fe{color:var(--danger);font-size:12px;margin-top:4px;min-height:16px}
+        .auth-btn{width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;margin-top:6px}
+        .auth-btn:hover{background:var(--pd)}
+        .af{display:none}.af.active{display:block}
+        .rr{display:flex;align-items:center;gap:6px;margin:10px 0;font-size:13px;color:var(--ts)}
+        .app{display:none;flex-direction:column;height:100vh}.app.show{display:flex}
+        .topbar{height:56px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:100}
+        .tb{font-size:17px;font-weight:bold;color:var(--primary);display:flex;align-items:center;gap:8px}
+        .tr{display:flex;align-items:center;gap:14px}
+        .ti{position:relative;cursor:pointer;color:var(--ts);font-size:16px;padding:8px;border-radius:50%;transition:.2s}.ti:hover{background:var(--bg)}
+        .tbg{position:absolute;top:4px;right:4px;width:7px;height:7px;background:var(--danger);border-radius:50%}
+        .ua{width:30px;height:30px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold}
+        .mw{display:flex;flex:1;overflow:hidden}
+        .sb{width:210px;background:var(--white);border-right:1px solid var(--border);padding:14px 0;overflow-y:auto}
+        .sl{font-size:11px;color:var(--ts);padding:8px 20px;letter-spacing:1px}
+        .si{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;font-size:13px;color:#595959;transition:.2s;margin:1px 8px;border-radius:6px}
+        .si:hover{background:var(--bg)}.si.active{background:var(--pl);color:var(--primary);font-weight:600}
+        .si i{width:18px;text-align:center;font-size:14px}
+        .ct{flex:1;overflow:hidden;position:relative}
+        .vw{position:absolute;inset:0;padding:16px;overflow-y:auto;opacity:0;pointer-events:none;transition:opacity .3s}
+        .vw.active{opacity:1;pointer-events:auto;z-index:1}
+        .ph{margin-bottom:16px}.pt{font-size:18px;font-weight:600;margin-bottom:3px}.pd{font-size:13px;color:var(--ts)}
+        .cd{background:var(--white);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow)}
+        .ch{padding:14px 16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+        .cb{padding:16px}
+        .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;transition:.2s;border:1px solid var(--border);background:var(--white);color:var(--text)}
+        .btn:hover{border-color:var(--primary);color:var(--primary)}
+        .bp{background:var(--primary);color:#fff;border-color:var(--primary)}.bp:hover{background:var(--pd)}
+        .bd{color:var(--danger);border-color:var(--danger)}.bs{background:var(--success);color:#fff;border-color:var(--success)}
+        .bw{background:var(--warn);color:#fff;border-color:var(--warn)}
+        .bsm{padding:3px 8px;font-size:11px}
+        .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px}
+        .tgs{background:var(--sl);color:var(--success)}.tgw{background:var(--wl);color:#d48806}.tgd{background:var(--dl);color:var(--danger)}
+        .sr{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+        .sc{background:var(--white);border-radius:var(--r);padding:16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+        .scl{font-size:13px;color:var(--ts);margin-bottom:6px}.scv{font-size:24px;font-weight:bold}
+        .sci{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+        .cr{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:16px}
+        .ir{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+        /* ===== 农事日历样式 ===== */
+        .cal-wrap{user-select:none}
+        .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+        .cal-nav-btn{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ts);transition:all .2s}
+        .cal-nav-btn:hover{background:var(--pl);color:var(--primary);border-color:var(--primary);transform:scale(1.1)}
+        .cal-title{font-size:15px;font-weight:700;color:var(--text);cursor:pointer;padding:4px 12px;border-radius:6px;transition:.2s}
+        .cal-title:hover{color:var(--primary);background:var(--pl)}
+        .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+        .cal-wk{font-size:11px;font-weight:600;color:var(--ts);padding:6px 0;border-bottom:1px solid var(--border)}
+        .cal-day{position:relative;padding:6px 2px;border-radius:6px;cursor:pointer;font-size:12px;min-height:38px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .15s}
+        .cal-day:hover{background:var(--pl)}
+        .cal-day.other{color:#d9d9d9;cursor:pointer}.cal-day.other:hover{background:#f9f9f9;color:#bbb}
+        .cal-day.today{background:linear-gradient(135deg,#1677ff,#4096ff);color:#fff;font-weight:700;border-radius:8px;box-shadow:0 2px 8px rgba(22,119,255,.35)}
+        .cal-day.today:hover{background:linear-gradient(135deg,#0958d9,#1677ff)}
+        .cal-day.selected{outline:2.5px solid var(--primary);outline-offset:-2px;background:var(--pl)}
+        .cal-day.today.selected{outline-color:#fff}
+        .cal-day.jq{color:var(--success);font-weight:700}
+        .cal-day.jq::after{content:attr(data-jq);position:absolute;bottom:1px;font-size:7px;color:var(--success);white-space:nowrap;line-height:1}
+        .cal-day.today.jq{color:#fff}.cal-day.today.jq::after{color:rgba(255,255,255,.8)}
+        .cal-day.has-task::before{content:'';position:absolute;top:3px;right:3px;width:5px;height:5px;background:var(--warn);border-radius:50%}
+        .cal-info{margin-top:12px;padding:12px 14px;background:var(--bg);border-radius:var(--r);font-size:12px;line-height:1.8;border:1px solid var(--border)}
+        .cal-jq-tag{display:inline-block;padding:1px 6px;background:var(--sl);color:var(--success);border-radius:3px;font-size:10px;margin:0 2px;font-weight:600}
+        .cal-task-tag{display:inline-block;padding:1px 6px;background:var(--wl);color:#d48806;border-radius:3px;font-size:10px;margin:0 2px}
+
+        /* ===== 天气卡片 ===== */
+        .weather-card{background:linear-gradient(135deg,#1677ff,#4096ff);border-radius:var(--r);padding:16px;color:#fff;position:relative;overflow:hidden}
+        .weather-card::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.08);border-radius:50%}
+        .weather-card::after{content:'';position:absolute;bottom:-30px;right:20px;width:80px;height:80px;background:rgba(255,255,255,.05);border-radius:50%}
+        .weather-main{display:flex;align-items:center;gap:16px;margin-bottom:12px;position:relative;z-index:1}
+        .weather-icon{font-size:42px}
+        .weather-temp{font-size:42px;font-weight:bold;line-height:1}
+        .weather-desc{font-size:13px;opacity:.9;margin-top:2px}
+        .weather-detail{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:relative;z-index:1}
+        .weather-item{text-align:center;padding:8px 4px;background:rgba(255,255,255,.12);border-radius:6px}
+        .weather-item .wv{font-size:14px;font-weight:600}.weather-item .wl{font-size:10px;opacity:.75;margin-top:2px}
+        .weather-forecast{display:flex;gap:6px;margin-top:12px;position:relative;z-index:1}
+        .weather-fc-item{flex:1;text-align:center;padding:8px 4px;background:rgba(255,255,255,.1);border-radius:6px}
+        .weather-fc-item .wfd{font-size:10px;opacity:.7}.weather-fc-item .wfi{font-size:18px;margin:4px 0}.weather-fc-item .wft{font-size:11px;font-weight:600}.weather-fc-item .wfl{font-size:10px;opacity:.7}
+        .weather-alert{margin-top:10px;padding:8px 12px;background:rgba(255,200,0,.2);border-radius:6px;font-size:11px;display:flex;align-items:center;gap:6px;position:relative;z-index:1}
+        .weather-loc{font-size:11px;opacity:.7;margin-bottom:8px;position:relative;z-index:1}
+
+        /* ===== 其他通用 ===== */
+        .ml{display:flex;gap:14px;height:100%}.mm{flex:1;display:flex;flex-direction:column;gap:10px}
+        .mt{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+        #mapC{flex:1;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);min-height:400px}
+        .mp{width:340px;display:flex;flex-direction:column;gap:14px}
+        .ii{display:flex;gap:10px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:8px}
+        .ip{width:64px;height:48px;border-radius:4px;object-fit:cover;border:1px solid var(--border);cursor:pointer}
+        .iif{flex:1;min-width:0}.iin{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+        .fl{display:flex;gap:14px;height:100%}.flp{width:340px;display:flex;flex-direction:column;gap:14px}
+        .fli{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;cursor:pointer;background:var(--white)}.fli:hover{border-color:var(--primary)}
+        .fc{width:10px;height:10px;border-radius:3px}.fd2{flex:1}.fd2 h4{font-size:13px;margin-bottom:2px}.fd2 p{font-size:11px;color:var(--ts)}
+        .db{background:var(--wl);border:1px solid var(--warn);padding:8px 14px;border-radius:6px;font-size:13px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.db.hd{display:none}
+        .dl{display:flex;gap:16px;height:100%}.dll{flex:1;display:flex;flex-direction:column;gap:14px}.dlr{width:400px;display:flex;flex-direction:column;gap:14px}
+        .uz{border:2px dashed var(--primary);background:var(--pl);padding:30px;text-align:center;border-radius:var(--r);cursor:pointer;transition:.3s}.uz:hover{background:#cce4ff}
+        .dt{width:100%;border-collapse:collapse;font-size:11px}
+        .dt th{background:var(--bg);padding:7px 8px;text-align:left;font-weight:600;border-bottom:2px solid var(--border);position:sticky;top:0;white-space:nowrap}
+        .dt td{padding:6px 8px;border-bottom:1px solid #f5f5f5;white-space:nowrap}.dt tr:hover td{background:#fafafa}
+        .dt td.editable{cursor:pointer;position:relative}.dt td.editable:hover{background:var(--pl)}
+        .ms{background:var(--bg);padding:10px;border-radius:6px;text-align:center}.ms .v{font-size:18px;font-weight:bold;color:var(--primary)}.ms .l{font-size:10px;color:var(--ts);margin-top:3px}
+        .al{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:calc(100% - 60px)}
+        .ac{display:flex;flex-direction:column;height:100%}
+        .cms{flex:1;overflow-y:auto;padding:10px 0}
+        .cm{display:flex;gap:10px;margin-bottom:14px}.cm.u{flex-direction:row-reverse}
+        .ca{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+        .ca.ai{background:linear-gradient(135deg,#1677ff,#4096ff);color:#fff}.ca.hu{background:var(--success);color:#fff}
+        .cbb{max-width:80%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6}
+        .cm:not(.u) .cbb{background:var(--bg);border-top-left-radius:4px}
+        .cm.u .cbb{background:var(--primary);color:#fff;border-top-right-radius:4px}
+        .cir{display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--border)}
+        .cin{flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:20px;font-size:13px;outline:none}.cin:focus{border-color:var(--primary)}
+        .csb{width:40px;height:40px;border-radius:50%;background:var(--primary);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+        .td2{display:inline-block;width:6px;height:6px;background:var(--ts);border-radius:50%;margin:0 2px;animation:tda 1s infinite}
+        .td2:nth-child(2){animation-delay:.2s}.td2:nth-child(3){animation-delay:.4s}
+        @keyframes tda{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+        .fii{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:6px}
+        .fic{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+        .finfo{flex:1;min-width:0}.finfo .nm{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.finfo .mt3{font-size:10px;color:var(--ts)}
+        .mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:none;align-items:center;justify-content:center;padding:30px}
+        .mo.show{display:flex}
+        .mb{background:var(--white);border-radius:12px;width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+        .mh{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:600}
+        .mcc{width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}.mcc:hover{background:var(--dl);color:var(--danger)}
+        .mbd{flex:1;overflow-y:auto;padding:24px}
+        .mf{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+        .rh{text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid var(--primary)}.rh h2{color:var(--primary);font-size:20px;margin-bottom:4px}.rh p{font-size:12px;color:var(--ts)}
+        .rs{margin-bottom:20px}.rs h3{color:var(--primary);font-size:15px;margin-bottom:10px;padding-left:10px;border-left:3px solid var(--primary)}
+        .rt{width:100%;border-collapse:collapse;font-size:12px;margin:10px 0}.rt th{background:var(--primary);color:#fff;padding:8px 10px;text-align:center}.rt td{padding:7px 10px;border:1px solid var(--border);text-align:center}.rt tr:nth-child(even) td{background:#fafafa}
+        .ra{padding:12px 16px;border-radius:6px;margin:8px 0;font-size:13px}
+        .rad{background:var(--dl);border-left:4px solid var(--danger)}.raw{background:var(--wl);border-left:4px solid var(--warn)}.ras{background:var(--sl);border-left:4px solid var(--success)}.rai{background:var(--pl);border-left:4px solid var(--primary)}
+        .rk{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0}.rki{text-align:center;padding:12px;background:var(--bg);border-radius:6px}.rki .v{font-size:22px;font-weight:bold;color:var(--primary)}.rki .l{font-size:11px;color:var(--ts);margin-top:4px}
+        .dcl{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        .sg{margin-bottom:20px}.sgl{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px}.sv{color:var(--primary);font-weight:bold}
+        input[type=range]{width:100%;accent-color:var(--primary)}
+        .ni{display:flex;gap:14px;padding:14px 16px;border-bottom:1px solid #f5f5f5}.ni:hover{background:#fafafa}
+        .nic{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+        .stt{font-size:15px;font-weight:600;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+        .str{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f5f5}
+        .sti h4{font-size:13px;margin-bottom:2px}.sti p{font-size:12px;color:var(--ts)}
+        #toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--white);border:1px solid var(--border);padding:10px 20px;border-radius:var(--r);font-size:13px;opacity:0;pointer-events:none;transition:.3s;z-index:9999;box-shadow:0 6px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;border-left:4px solid var(--primary)}
+        #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        .edit-input{width:100%;padding:4px 6px;border:2px solid var(--primary);border-radius:4px;font-size:11px;outline:none;background:var(--pl)}
+        .sync-pulse{animation:sp 2s ease-in-out}@keyframes sp{0%{box-shadow:0 0 0 0 rgba(22,119,255,.4)}50%{box-shadow:0 0 0 8px rgba(22,119,255,0)}100%{box-shadow:none}}
+    </style>
+</head>
+<body>
+
+<!-- 登录页 -->
+<div class="auth-page" id="authPage">
+    <div class="auth-bg"></div><canvas id="particleCanvas"></canvas>
+    <div class="auth-container">
+        <div class="auth-header"><h1><i class="fas fa-seedling"></i> 高标准农田智慧监管平台</h1><p>空天地一体化 · AI数智农业</p></div>
+        <div class="auth-body">
+            <div class="auth-tabs"><div class="auth-tab active" onclick="swAT('login')">登录</div><div class="auth-tab" onclick="swAT('register')">注册</div></div>
+            <form class="af active" id="loginForm" onsubmit="doLogin(event)"><div class="fg"><label>用户名</label><input class="fi" id="lu" required></div><div class="fg"><label>密码</label><input class="fi" id="lp" type="password" required></div><div class="rr"><input type="checkbox" id="rm" checked><label for="rm">7天免登录</label></div><div class="fe" id="le"></div><button type="submit" class="auth-btn">登 录</button></form>
+            <form class="af" id="regForm" onsubmit="doReg(event)"><div class="fg"><label>用户名</label><input class="fi" id="ru" required></div><div class="fg"><label>密码</label><input class="fi" id="rp" type="password" required></div><div class="fg"><label>确认密码</label><input class="fi" id="rp2" type="password" required></div><div class="fe" id="re"></div><button type="submit" class="auth-btn">注 册</button></form>
+        </div>
+    </div>
+</div>
+
+<!-- 报告弹窗 -->
+<div class="mo" id="rptM"><div class="mb"><div class="mh"><span><i class="fas fa-file-alt" style="color:var(--primary);margin-right:8px"></i>AI报告预览</span><button class="mcc" onclick="closeRpt()">×</button></div><div class="mbd" id="rptBody"></div><div class="mf"><button class="btn" onclick="closeRpt()">关闭</button><button class="btn bp" onclick="printRpt()"><i class="fas fa-print"></i> 打印</button><button class="btn bs" onclick="dlRpt()"><i class="fas fa-download"></i> 导出</button></div></div></div>
+
+<!-- 主应用 -->
+<div class="app" id="app">
+    <header class="topbar">
+        <div class="tb"><i class="fas fa-seedling"></i> 农田智慧监管平台</div>
+        <div class="tr">
+            <div class="ti" onclick="sw('ai')"><i class="fas fa-robot"></i><span class="tbg"></span></div>
+            <div class="ti" onclick="sw('notif')"><i class="fas fa-bell"></i></div>
+            <div class="ti" onclick="sw('set')"><i class="fas fa-cog"></i></div>
+            <div style="display:flex;align-items:center;gap:6px"><div class="ua" id="uaEl">A</div><span id="unEl" style="font-size:13px">管理员</span></div>
+            <div class="btn bsm bd" onclick="logout()"><i class="fas fa-sign-out-alt"></i></div>
+        </div>
+    </header>
+    <div class="mw">
+        <aside class="sb">
+            <div class="sl">概览</div>
+            <div class="si active" onclick="sw('dash',this)"><i class="fas fa-th-large"></i> 数据仪表盘</div>
+            <div class="sl">空间</div>
+            <div class="si" onclick="sw('remote',this)"><i class="fas fa-satellite"></i> 遥感影像</div>
+            <div class="si" onclick="sw('fields',this)"><i class="fas fa-draw-polygon"></i> 地块管理</div>
+            <div class="sl">数据</div>
+            <div class="si" onclick="sw('data',this)"><i class="fas fa-database"></i> 农户数据</div>
+            <div class="si" onclick="sw('ai',this)"><i class="fas fa-robot"></i> AI分析</div>
+            <div class="sl">决策</div>
+            <div class="si" onclick="sw('dec',this)"><i class="fas fa-flask"></i> 水肥决策</div>
+            <div class="sl">系统</div>
+            <div class="si" onclick="sw('notif',this)"><i class="fas fa-bell"></i> 通知</div>
+            <div class="si" onclick="sw('set',this)"><i class="fas fa-cog"></i> 设置</div>
+        </aside>
+        <div class="ct">
+
+<!-- ========== 仪表盘 ========== -->
+<div class="vw active" id="v-dash">
+    <div class="ph"><div class="pt">数据仪表盘</div><div class="pd" id="dashDt"></div></div>
+    <div class="sr">
+        <div class="sc" id="sStat0"><div><div class="scl">监测总面积</div><div class="scv" id="sArea">0<span style="font-size:13px"> 亩</span></div></div><div class="sci" style="background:var(--pl);color:var(--primary)"><i class="fas fa-map"></i></div></div>
+        <div class="sc" id="sStat1"><div><div class="scl">农户/地块</div><div class="scv" id="sFarmer">0</div></div><div class="sci" style="background:var(--sl);color:var(--success)"><i class="fas fa-users"></i></div></div>
+        <div class="sc" id="sStat2"><div><div class="scl">AI分析</div><div class="scv" id="sAI">0</div></div><div class="sci" style="background:var(--wl);color:var(--warn)"><i class="fas fa-brain"></i></div></div>
+        <div class="sc" id="sStat3"><div><div class="scl">预警</div><div class="scv" id="sAlert">0</div></div><div class="sci" style="background:var(--dl);color:var(--danger)"><i class="fas fa-exclamation-triangle"></i></div></div>
+    </div>
+    <div class="cr">
+        <div class="cd"><div class="ch">关键指标趋势 <span id="trendSrc" style="font-size:11px;color:var(--ts)"></span></div><div class="cb"><canvas id="trendC" height="90"></canvas></div></div>
+        <div class="cd"><div class="ch">土壤健康评分</div><div class="cb"><canvas id="healthC" height="160"></canvas></div></div>
+    </div>
+    <div class="ir">
+        <div class="cd" style="display:flex;flex-direction:column">
+            <div class="ch">🗓️ 农事日历</div>
+            <div class="cb" id="calB" style="flex:1"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="cd"><div class="ch">🌤️ 实时天气</div><div class="cb" id="weatherBox" style="padding:0"></div></div>
+            <div class="cd" style="flex:1"><div class="ch">实时动态</div><div class="cb" id="actL"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== 遥感 ========== -->
+<div class="vw" id="v-remote">
+    <div class="ph"><div class="pt">遥感影像</div></div>
+    <div class="ml"><div class="mm"><div class="mt"><button class="btn active" onclick="chgLy('base',this)"><i class="fas fa-vector-square"></i> 边界</button><button class="btn" onclick="chgLy('ndvi',this)"><i class="fas fa-th"></i> NDVI</button><button class="btn bp" onclick="flyDrone()" id="drBtn"><i class="fas fa-plane"></i> 无人机</button></div><div id="mapC"></div></div><div class="mp"><div class="cd"><div class="ch">影像 <button class="btn bsm bp" onclick="document.getElementById('imgU').click()"><i class="fas fa-plus"></i></button></div><input type="file" id="imgU" accept="image/*" style="display:none" onchange="upImg(event)"><div class="cb" id="imgL" style="max-height:320px;overflow-y:auto"></div></div><div class="cd" style="flex:1"><div class="ch">日志</div><div class="cb" id="logL" style="max-height:200px;overflow-y:auto;font-size:11px;color:var(--ts)"></div></div></div></div>
+</div>
+
+<!-- ========== 地块 ========== -->
+<div class="vw" id="v-fields">
+    <div class="ph"><div class="pt">地块管理</div></div>
+    <div class="db hd" id="drawBar"><span><i class="fas fa-pencil-alt"></i> 框选中</span><div style="display:flex;gap:6px"><button class="btn bsm bs" onclick="finDraw()"><i class="fas fa-check"></i></button><button class="btn bsm bd" onclick="canDraw()"><i class="fas fa-times"></i></button></div></div>
+    <div class="fl"><div class="flp"><div class="cd" style="flex:1;display:flex;flex-direction:column"><div class="ch">地块(<span id="fCnt">0</span>)<div style="display:flex;gap:4px"><button class="btn bsm bp" onclick="aiField()"><i class="fas fa-magic"></i> AI</button><button class="btn bsm bw" onclick="startDraw()"><i class="fas fa-pencil-alt"></i></button></div></div><div class="cb" id="fList" style="flex:1;overflow-y:auto"></div></div></div><div style="flex:1"><div id="fMapH" style="width:100%;height:100%;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);min-height:400px"></div></div></div>
+</div>
+
+<!-- ========== 数据 ========== -->
+<div class="vw" id="v-data">
+    <div class="ph"><div class="pt"><i class="fas fa-database" style="color:var(--primary)"></i> 农户数据管理</div><div class="pd">双击单元格编辑 → 全平台同步</div></div>
+    <div class="dl"><div class="dll">
+        <div class="cd"><div class="ch">导入<div style="display:flex;gap:6px"><button class="btn bsm bp" onclick="document.getElementById('dataU').click()"><i class="fas fa-file-upload"></i> 导入</button><button class="btn bsm" onclick="loadSample()"><i class="fas fa-flask"></i> 示例</button><button class="btn bsm bs" onclick="expCSV()"><i class="fas fa-download"></i> CSV</button></div></div><input type="file" id="dataU" accept=".csv,.xlsx,.xls" style="display:none" onchange="upData(event)"><div class="cb"><div class="uz" onclick="document.getElementById('dataU').click()"><i class="fas fa-cloud-upload-alt" style="font-size:36px;color:var(--primary);display:block;margin-bottom:8px"></i><div style="font-size:15px;font-weight:600">点击上传</div><div style="font-size:12px;color:var(--ts)">.csv .xlsx .xls</div></div></div></div>
+        <div class="cd" style="flex:1;display:flex;flex-direction:column"><div class="ch">预览 <span id="dInfo" style="font-size:12px;color:var(--ts);font-weight:normal"></span><div style="display:flex;gap:4px"><button class="btn bsm bp" onclick="runAI()"><i class="fas fa-brain"></i> AI分析</button><button class="btn bsm bd" onclick="clrData()"><i class="fas fa-trash"></i></button></div></div><div class="cb" style="flex:1;overflow:auto" id="tBox"><div style="text-align:center;color:var(--ts);padding:40px"><i class="fas fa-table" style="font-size:36px;display:block;margin-bottom:12px;color:#d9d9d9"></i>暂无</div></div></div>
+    </div><div class="dlr">
+        <div class="cd"><div class="ch"><i class="fas fa-chart-bar" style="color:var(--primary)"></i> 概览</div><div class="cb"><div id="dStats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div><canvas id="dChart" height="140" style="margin-top:10px;display:none"></canvas></div></div>
+        <div class="cd" style="flex:1;display:flex;flex-direction:column"><div class="ch"><i class="fas fa-brain" style="color:var(--primary)"></i> AI摘要<div style="display:flex;gap:4px"><button class="btn bsm" onclick="prevRpt()"><i class="fas fa-eye"></i></button><button class="btn bsm bs" onclick="dlRpt()"><i class="fas fa-download"></i></button></div></div><div class="cb" id="aiSum" style="flex:1;overflow-y:auto;font-size:12px;line-height:1.8"><div style="text-align:center;color:var(--ts);padding:20px">点击AI分析</div></div></div>
+    </div></div>
+</div>
+
+<!-- ========== AI ========== -->
+<div class="vw" id="v-ai">
+    <div class="ph"><div class="pt"><i class="fas fa-robot" style="color:var(--primary)"></i> AI智能分析</div><div class="pd">自动引用已导入数据</div></div>
+    <div class="al"><div class="cd" style="display:flex;flex-direction:column"><div class="ch">AI对话</div><div class="cb ac" style="flex:1"><div class="cms" id="chatMs"><div class="cm"><div class="ca ai"><i class="fas fa-robot"></i></div><div class="cbb">你好！我已连接数据库。可基于真实数据回答，也支持上传文件分析。</div></div></div><div class="cir"><button class="btn bsm" onclick="document.getElementById('aiF').click()"><i class="fas fa-paperclip"></i></button><input type="file" id="aiF" style="display:none" accept="image/*,.csv,.xlsx,.xls,.txt,.pdf" onchange="aiFile(event)"><input class="cin" id="chatI" placeholder="提问..." onkeydown="if(event.key==='Enter')chat()"><button class="csb" onclick="chat()"><i class="fas fa-paper-plane"></i></button></div></div></div>
+    <div style="display:flex;flex-direction:column;gap:14px"><div class="cd"><div class="ch">快捷</div><div class="cb" style="display:flex;flex-wrap:wrap;gap:6px" id="qQ"></div></div><div class="cd"><div class="ch">已上传</div><div class="cb" id="aiFL" style="max-height:160px;overflow-y:auto"><div style="text-align:center;color:var(--ts);font-size:12px;padding:12px">暂无</div></div></div><div class="cd" style="flex:1"><div class="ch">图表</div><div class="cb"><canvas id="aiCh" height="180"></canvas></div></div></div></div>
+</div>
+
+<!-- ========== 决策 ========== -->
+<div class="vw" id="v-dec">
+    <div class="ph"><div class="pt">水肥决策</div><div class="pd">自动同步导入数据</div></div>
+    <div class="dcl">
+        <div class="cd"><div class="ch">参数 <span id="decSrc" style="font-size:11px;color:var(--ts)"></span></div><div class="cb"><div class="sg"><div class="sgl"><span>含水率</span><span class="sv" id="vM">45%</span></div><input type="range" id="iM" min="10" max="90" value="45" oninput="model()"></div><div class="sg"><div class="sgl"><span>pH</span><span class="sv" id="vPH">6.5</span></div><input type="range" id="iPH" min="40" max="90" value="65" oninput="model()"></div><div class="sg"><div class="sgl"><span>降雨概率</span><span class="sv" id="vR">20%</span></div><input type="range" id="iR" min="0" max="100" value="20" oninput="model()"></div><div class="sg"><div class="sgl"><span>生长期</span></div><select class="fi" id="iS" onchange="model()"><option>苗期</option><option selected>拔节期</option><option>抽穗期</option></select></div></div></div>
+        <div class="cd"><div class="ch">AI处方</div><div class="cb"><div id="decO"></div><canvas id="radC" height="180" style="margin-top:16px"></canvas></div></div>
+    </div>
+</div>
+
+<!-- ========== 通知/设置 ========== -->
+<div class="vw" id="v-notif"><div class="ph"><div class="pt">通知</div></div><div class="cd"><div class="ch">通知</div><div id="nfL"></div></div></div>
+<div class="vw" id="v-set"><div class="ph"><div class="pt">设置</div></div><div class="cd"><div class="cb"><div class="stt">账户</div><div class="str"><div class="sti"><h4>用户名</h4><p id="sU">--</p></div></div><div class="stt" style="margin-top:16px">数据</div><div class="str"><div class="sti"><h4>清空所有</h4></div><button class="btn bsm bd" onclick="clrAll()"><i class="fas fa-trash"></i></button></div></div></div></div>
+
+        </div>
+    </div>
+</div>
+<div id="toast"><i class="fas fa-info-circle"></i><span id="toastMsg"></span></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ============================================
+//  全局数据中心
+// ============================================
+let G={TD:{h:[],r:[]},fields:[],images:[],aiFiles:[],aiCnt:0,alertCnt:0,rptCnt:0,fullRpt:'',charts:{},weather:null};
+
+// ============================================
+//  粒子背景
+// ============================================
+(function(){const c=document.getElementById('particleCanvas'),x=c.getContext('2d');let p=[];function r(){c.width=innerWidth;c.height=innerHeight}addEventListener('resize',r);r();class P{constructor(){this.x=Math.random()*c.width;this.y=Math.random()*c.height;this.vx=(Math.random()-.5)*.5;this.vy=(Math.random()-.5)*.5;this.r=Math.random()*2+1;this.a=Math.random()*.5+.1}update(){this.x+=this.vx;this.y+=this.vy;if(this.x<0||this.x>c.width)this.vx*=-1;if(this.y<0||this.y>c.height)this.vy*=-1}draw(){x.beginPath();x.arc(this.x,this.y,this.r,0,Math.PI*2);x.fillStyle=`rgba(255,255,255,${this.a})`;x.fill()}}for(let i=0;i<60;i++)p.push(new P);function a(){x.clearRect(0,0,c.width,c.height);p.forEach(q=>{q.update();q.draw()});for(let i=0;i<p.length;i++)for(let j=i+1;j<p.length;j++){let d=Math.hypot(p[i].x-p[j].x,p[i].y-p[j].y);if(d<120){x.beginPath();x.moveTo(p[i].x,p[i].y);x.lineTo(p[j].x,p[j].y);x.strokeStyle=`rgba(255,255,255,${.12*(1-d/120)})`;x.stroke()}}requestAnimationFrame(a)}a()})();
+
+// ============================================
+//  认证系统
+// ============================================
+function getU(){return JSON.parse(localStorage.getItem('au')||'{}')}
+function svU(u){localStorage.setItem('au',JSON.stringify(u))}
+function swAT(t){document.querySelectorAll('.auth-tab').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.af').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.auth-tab')[t==='login'?0:1].classList.add('active');document.getElementById(t==='login'?'loginForm':'regForm').classList.add('active')}
+function doReg(e){e.preventDefault();const u=document.getElementById('ru').value.trim(),p=document.getElementById('rp').value,p2=document.getElementById('rp2').value,er=document.getElementById('re');if(u.length<4){er.textContent='至少4位';return}if(p.length<6){er.textContent='至少6位';return}if(p!==p2){er.textContent='不一致';return}const us=getU();if(us[u]){er.textContent='已存在';return}us[u]={password:p};svU(us);toast('注册成功！','success');swAT('login');document.getElementById('lu').value=u}
+function doLogin(e){e.preventDefault();const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value,er=document.getElementById('le'),us=getU();if(!us[u]){er.textContent='不存在';return}if(us[u].password!==p){er.textContent='密码错误';return}if(document.getElementById('rm').checked)localStorage.setItem('ss',JSON.stringify({user:u,time:Date.now()}));enter(u)}
+function logout(){localStorage.removeItem('ss');document.getElementById('app').classList.remove('show');document.getElementById('authPage').classList.remove('hidden')}
+function enter(u){document.getElementById('authPage').classList.add('hidden');document.getElementById('app').classList.add('show');document.getElementById('unEl').textContent=u;document.getElementById('uaEl').textContent=u[0].toUpperCase();document.getElementById('sU').textContent=u;initApp()}
+function chkSess(){const s=JSON.parse(localStorage.getItem('ss')||'null');if(s&&Date.now()-s.time<7*864e5)enter(s.user)}
+let tto;function toast(m,t='info'){const el=document.getElementById('toast');document.getElementById('toastMsg').textContent=m;el.style.borderLeftColor={info:'var(--primary)',success:'var(--success)',warn:'var(--warn)',error:'var(--danger)'}[t]||'var(--primary)';el.classList.add('show');clearTimeout(tto);tto=setTimeout(()=>el.classList.remove('show'),3000)}
+
+// ============================================
+//  路由
+// ============================================
+function sw(v,el){if(el){document.querySelectorAll('.si').forEach(s=>s.classList.remove('active'));el.classList.add('active')}document.querySelectorAll('.vw').forEach(x=>x.classList.remove('active'));const t=document.getElementById('v-'+v);if(t)t.classList.add('active');if(v==='remote')mvMap('mapC');else if(v==='fields')mvMap('fMapH')}
+function mvMap(id){const h=document.getElementById(id),m=document.getElementById('theMap');if(!m||!h||m.parentElement===h){trg();return}h.appendChild(m);trg()}
+function trg(){if(map)requestAnimationFrame(()=>setTimeout(()=>map.invalidateSize(),80))}
+
+// ============================================
+//  持久化 & 工具
+// ============================================
+function saveData(){localStorage.setItem('gd',JSON.stringify({TD:G.TD,fields:G.fields.map(f=>({id:f.id,name:f.name,area:f.area,color:f.color,latlngs:f.latlngs,visible:f.visible})),aiCnt:G.aiCnt,alertCnt:G.alertCnt,rptCnt:G.rptCnt}))}
+function loadData(){try{const d=JSON.parse(localStorage.getItem('gd'));if(d){G.TD=d.TD||{h:[],r:[]};G.fields=d.fields||[];G.aiCnt=d.aiCnt||0;G.alertCnt=d.alertCnt||0;G.rptCnt=d.rptCnt||0}}catch(e){}}
+function getNC(){const nc=[];G.TD.h.forEach((h,i)=>{const vs=G.TD.r.map(r=>parseFloat(r[i])).filter(v=>!isNaN(v));if(vs.length>G.TD.r.length*.4)nc.push({name:h,idx:i,vals:vs})});return nc}
+function fmtSz(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB'}
+
+// ============================================
+//  全平台同步引擎
+// ============================================
+function syncAll(){saveData();syncDash();syncDec();renderFields();renderTable();document.querySelectorAll('.sc').forEach(el=>{el.classList.remove('sync-pulse');void el.offsetWidth;el.classList.add('sync-pulse')})}
+function syncDash(){
+    const nc=getNC(),n=G.TD.r.length;
+    const ac=nc.find(c=>c.name.includes('面积'));
+    const ta=ac?ac.vals.reduce((a,b)=>a+b,0).toFixed(0):(G.fields.reduce((s,f)=>s+parseFloat(f.area||0),0).toFixed(0));
+    document.getElementById('sArea').innerHTML=Number(ta).toLocaleString()+'<span style="font-size:13px"> 亩</span>';
+    document.getElementById('sFarmer').textContent=n||G.fields.length;
+    document.getElementById('sAI').textContent=G.aiCnt;
+    document.getElementById('sAlert').textContent=G.alertCnt;
+    if(G.charts.trend)G.charts.trend.destroy();
+    const cv=document.getElementById('trendC');
+    if(nc.length>=1){const c1=nc.find(c=>c.name.includes('含水'))||nc[0],c2=nc.length>1?(nc.find(c=>c.name.includes('产量'))||nc[1]):null;const lb=G.TD.r.map(r=>r[1]||r[0]).slice(0,12);const ds=[{label:c1.name,data:c1.vals.slice(0,12),borderColor:'#1677ff',backgroundColor:'rgba(22,119,255,.1)',fill:true,tension:.4}];if(c2)ds.push({label:c2.name,data:c2.vals.slice(0,12),borderColor:'#faad14',tension:.4});G.charts.trend=new Chart(cv,{type:'line',data:{labels:lb,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{x:{ticks:{font:{size:8}}}}}});document.getElementById('trendSrc').textContent='数据来源：导入表格'}
+    else{G.charts.trend=new Chart(cv,{type:'line',data:{labels:['周一','周二','周三','周四','周五','周六','周日'],datasets:[{label:'含水率(%)',data:[42,45,50,48,55,52,46],borderColor:'#1677ff',backgroundColor:'rgba(22,119,255,.1)',fill:true,tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});document.getElementById('trendSrc').textContent='示例'}
+    if(G.charts.health)G.charts.health.destroy();
+    const hv=document.getElementById('healthC');const phC=nc.find(c=>c.name.includes('pH')),wC=nc.find(c=>c.name.includes('含水')),omC=nc.find(c=>c.name.includes('有机'));
+    const pS=phC?Math.max(0,100-Math.abs((phC.vals.reduce((a,b)=>a+b,0)/phC.vals.length)-6.8)*20):70;
+    const wS=wC?Math.max(0,100-Math.abs((wC.vals.reduce((a,b)=>a+b,0)/wC.vals.length)-45)*2):65;
+    const oS=omC?Math.min(100,(omC.vals.reduce((a,b)=>a+b,0)/omC.vals.length)*5):60;
+    G.charts.health=new Chart(hv,{type:'doughnut',data:{labels:['pH','水分','有机质','差距'],datasets:[{data:[pS.toFixed(0),wS.toFixed(0),oS.toFixed(0),Math.max(0,300-pS-wS-oS).toFixed(0)],backgroundColor:['#52c41a','#1677ff','#faad14','#f0f0f0']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}})
+}
+function syncDec(){const nc=getNC();const wC=nc.find(c=>c.name.includes('含水')),phC=nc.find(c=>c.name.includes('pH'));if(wC){const a=Math.round(wC.vals.reduce((a,b)=>a+b,0)/wC.vals.length);document.getElementById('iM').value=a}if(phC){const a=Math.round(phC.vals.reduce((a,b)=>a+b,0)/phC.vals.length*10);document.getElementById('iPH').value=a}if(nc.length)document.getElementById('decSrc').textContent='已同步导入数据';model()}
+
+// ============================================
+//  ★ 天气系统（Open-Meteo API）
+// ============================================
+const WEATHER_API='https://api.open-meteo.com/v1/forecast';
+const LOC={lat:34.745,lon:113.625,name:'郑州'};
+const weatherIcons={'0':'fa-sun','1':'fa-cloud-sun','2':'fa-cloud','3':'fa-cloud','45':'fa-smog','48':'fa-smog','51':'fa-cloud-rain','53':'fa-cloud-rain','55':'fa-cloud-showers-heavy','61':'fa-cloud-rain','63':'fa-cloud-showers-heavy','65':'fa-cloud-showers-heavy','71':'fa-snowflake','73':'fa-snowflake','75':'fa-snowflake','80':'fa-cloud-rain','81':'fa-cloud-showers-heavy','82':'fa-cloud-showers-heavy','95':'fa-bolt','96':'fa-bolt','99':'fa-bolt'};
+const weatherText={'0':'晴','1':'少云','2':'多云','3':'阴天','45':'雾','48':'雾凇','51':'小毛雨','53':'毛雨','55':'密毛雨','61':'小雨','63':'中雨','65':'大雨','71':'小雪','73':'中雪','75':'大雪','80':'阵雨','81':'中阵雨','82':'暴雨','95':'雷暴','96':'冰雹雷暴','99':'强冰雹雷暴'};
+
+async function fetchWeather(){
+    try{
+        const url=`${WEATHER_API}?latitude=${LOC.lat}&longitude=${LOC.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FShanghai&forecast_days=5`;
+        const res=await fetch(url);if(!res.ok)throw new Error('fail');
+        const data=await res.json();G.weather=data;renderWeather(data);
+    }catch(e){console.warn('天气API离线',e);renderWeatherFallback()}
+}
+function renderWeather(data){
+    const cur=data.current,daily=data.daily;
+    const code=String(cur.weather_code),icon=weatherIcons[code]||'fa-cloud-sun',desc=weatherText[code]||'多云';
+    const temp=Math.round(cur.temperature_2m),feel=Math.round(cur.apparent_temperature),hum=cur.relative_humidity_2m,wind=cur.wind_speed_10m;
+    let alert='';
+    if([61,63,65,80,81,82,95,96,99].includes(cur.weather_code))alert='<div class="weather-alert"><i class="fas fa-exclamation-triangle"></i> 有降水，注意排水和作业安全</div>';
+    else if(temp>35)alert='<div class="weather-alert"><i class="fas fa-exclamation-triangle"></i> 高温预警：注意灌溉补水</div>';
+    else if(temp<0)alert='<div class="weather-alert"><i class="fas fa-exclamation-triangle"></i> 低温预警：注意防冻</div>';
+    let fc='<div class="weather-forecast">';
+    const dn=['今天','明天','后天'];
+    for(let i=1;i<Math.min(5,daily.time.length);i++){const dc=String(daily.weather_code[i]),di=weatherIcons[dc]||'fa-cloud';const dd=new Date(daily.time[i]);const lb=i<3?dn[i]:`${dd.getMonth()+1}/${dd.getDate()}`;fc+=`<div class="weather-fc-item"><div class="wfd">${lb}</div><div class="wfi"><i class="fas ${di}"></i></div><div class="wft">${Math.round(daily.temperature_2m_max[i])}°</div><div class="wfl">${Math.round(daily.temperature_2m_min[i])}°</div></div>`}
+    fc+='</div>';
+    document.getElementById('weatherBox').innerHTML=`<div class="weather-card"><div class="weather-loc"><i class="fas fa-map-marker-alt"></i> ${LOC.name} · ${new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}更新</div><div class="weather-main"><div class="weather-icon"><i class="fas ${icon}"></i></div><div><div class="weather-temp">${temp}°</div><div class="weather-desc">${desc} · 体感${feel}°</div></div></div><div class="weather-detail"><div class="weather-item"><div class="wv">${hum}%</div><div class="wl">湿度</div></div><div class="weather-item"><div class="wv">${wind}km/h</div><div class="wl">风速</div></div><div class="weather-item"><div class="wv">${Math.round(daily.temperature_2m_min[0])}°~${Math.round(daily.temperature_2m_max[0])}°</div><div class="wl">温差</div></div></div>${fc}${alert}</div>`;
+}
+function renderWeatherFallback(){
+    const t=18+Math.round(Math.random()*15);
+    document.getElementById('weatherBox').innerHTML=`<div class="weather-card"><div class="weather-loc"><i class="fas fa-map-marker-alt"></i> ${LOC.name} · 离线模式</div><div class="weather-main"><div class="weather-icon"><i class="fas fa-cloud-sun"></i></div><div><div class="weather-temp">${t}°</div><div class="weather-desc">多云 · 体感${t-2}°</div></div></div><div class="weather-detail"><div class="weather-item"><div class="wv">65%</div><div class="wl">湿度</div></div><div class="weather-item"><div class="wv">12km/h</div><div class="wl">风速</div></div><div class="weather-item"><div class="wv">${t-6}°~${t+4}°</div><div class="wl">温差</div></div></div><div class="weather-forecast"><div class="weather-fc-item"><div class="wfd">明天</div><div class="wfi"><i class="fas fa-sun"></i></div><div class="wft">${t+2}°</div><div class="wfl">${t-5}°</div></div><div class="weather-fc-item"><div class="wfd">后天</div><div class="wfi"><i class="fas fa-cloud-rain"></i></div><div class="wft">${t-1}°</div><div class="wfl">${t-7}°</div></div><div class="weather-fc-item"><div class="wfd">周四</div><div class="wfi"><i class="fas fa-cloud"></i></div><div class="wft">${t+1}°</div><div class="wfl">${t-4}°</div></div><div class="weather-fc-item"><div class="wfd">周五</div><div class="wfi"><i class="fas fa-cloud-sun"></i></div><div class="wft">${t+3}°</div><div class="wfl">${t-3}°</div></div></div><div class="weather-alert"><i class="fas fa-info-circle"></i> 天气API未连接，显示模拟</div></div>`;
+}
+
+// ============================================
+//  ★★ 农事日历（完整可翻月翻年版）
+// ============================================
+let calYear=null,calMonth=null,calSelected=null;
+
+const JIEQI_DATA={
+    2023:[{n:'小寒',m:1,d:5},{n:'大寒',m:1,d:20},{n:'立春',m:2,d:4},{n:'雨水',m:2,d:19},{n:'惊蛰',m:3,d:6},{n:'春分',m:3,d:21},{n:'清明',m:4,d:5},{n:'谷雨',m:4,d:20},{n:'立夏',m:5,d:6},{n:'小满',m:5,d:21},{n:'芒种',m:6,d:6},{n:'夏至',m:6,d:21},{n:'小暑',m:7,d:7},{n:'大暑',m:7,d:23},{n:'立秋',m:8,d:8},{n:'处暑',m:8,d:23},{n:'白露',m:9,d:8},{n:'秋分',m:9,d:23},{n:'寒露',m:10,d:8},{n:'霜降',m:10,d:24},{n:'立冬',m:11,d:8},{n:'小雪',m:11,d:22},{n:'大雪',m:12,d:7},{n:'冬至',m:12,d:22}],
+    2024:[{n:'小寒',m:1,d:6},{n:'大寒',m:1,d:20},{n:'立春',m:2,d:4},{n:'雨水',m:2,d:19},{n:'惊蛰',m:3,d:5},{n:'春分',m:3,d:20},{n:'清明',m:4,d:4},{n:'谷雨',m:4,d:19},{n:'立夏',m:5,d:5},{n:'小满',m:5,d:20},{n:'芒种',m:6,d:5},{n:'夏至',m:6,d:21},{n:'小暑',m:7,d:6},{n:'大暑',m:7,d:22},{n:'立秋',m:8,d:7},{n:'处暑',m:8,d:22},{n:'白露',m:9,d:7},{n:'秋分',m:9,d:22},{n:'寒露',m:10,d:8},{n:'霜降',m:10,d:23},{n:'立冬',m:11,d:7},{n:'小雪',m:11,d:22},{n:'大雪',m:12,d:6},{n:'冬至',m:12,d:21}],
+    2025:[{n:'小寒',m:1,d:5},{n:'大寒',m:1,d:20},{n:'立春',m:2,d:3},{n:'雨水',m:2,d:18},{n:'惊蛰',m:3,d:5},{n:'春分',m:3,d:20},{n:'清明',m:4,d:4},{n:'谷雨',m:4,d:20},{n:'立夏',m:5,d:5},{n:'小满',m:5,d:21},{n:'芒种',m:6,d:5},{n:'夏至',m:6,d:21},{n:'小暑',m:7,d:7},{n:'大暑',m:7,d:22},{n:'立秋',m:8,d:7},{n:'处暑',m:8,d:22},{n:'白露',m:9,d:7},{n:'秋分',m:9,d:22},{n:'寒露',m:10,d:8},{n:'霜降',m:10,d:23},{n:'立冬',m:11,d:7},{n:'小雪',m:11,d:22},{n:'大雪',m:12,d:7},{n:'冬至',m:12,d:21}],
+    2026:[{n:'小寒',m:1,d:5},{n:'大寒',m:1,d:20},{n:'立春',m:2,d:4},{n:'雨水',m:2,d:18},{n:'惊蛰',m:3,d:5},{n:'春分',m:3,d:20},{n:'清明',m:4,d:5},{n:'谷雨',m:4,d:20},{n:'立夏',m:5,d:5},{n:'小满',m:5,d:21},{n:'芒种',m:6,d:5},{n:'夏至',m:6,d:21},{n:'小暑',m:7,d:7},{n:'大暑',m:7,d:22},{n:'立秋',m:8,d:7},{n:'处暑',m:8,d:23},{n:'白露',m:9,d:7},{n:'秋分',m:9,d:23},{n:'寒露',m:10,d:8},{n:'霜降',m:10,d:23},{n:'立冬',m:11,d:7},{n:'小雪',m:11,d:22},{n:'大雪',m:12,d:7},{n:'冬至',m:12,d:22}]
+};
+function getJQ(y){return JIEQI_DATA[y]||JIEQI_DATA[2025].map(j=>({...j}))}
+
+const FARM_TASKS={1:['冬季深翻','腊肥施用','农机检修'],2:['备种育苗','春灌准备','返青管理'],3:['小麦追肥','春耕整地','病虫普查'],4:['拔节水管理','玉米备播','植保巡田'],5:['抽穗扬花','夏收准备','玉米播种'],6:['小麦收获','夏播','秸秆还田'],7:['玉米追肥','灌溉管理','病虫防治'],8:['玉米授粉','抗旱排涝','墒情监测'],9:['秋收准备','成熟管理','基肥采购'],10:['秋收','深翻整地','小麦播种'],11:['越冬管理','冬灌','秸秆处理'],12:['越冬防护','年度总结','规划储备']};
+
+function getJQAdvice(name){
+    const m={'小寒':'天寒地冻，做好小麦越冬防护，适时冬灌保墒。','大寒':'全年最冷，检修农机具，备齐春耕物资。','立春':'春回大地，小麦返青期管理，酌情追施返青肥。','雨水':'降水渐增，关注排水，春耕整地准备育苗。','惊蛰':'万物复苏，病虫害开始活动，及时防治。','春分':'昼夜等长，小麦拔节期精准灌溉追肥。','清明':'气温回升，春播关键期，小麦穗分化。','谷雨':'降雨充沛，春播黄金期，关注墒情。','立夏':'夏季开始，小麦灌浆期加强管理。','小满':'籽粒灌浆中，重点防治赤霉病白粉病。','芒种':'夏收夏种最关键！抢晴收麦抢时播玉米。','夏至':'日照最长，高温多发，注意灌溉降温。','小暑':'天气炎热，玉米大喇叭口期重追肥。','大暑':'全年最热，加强抗旱保水，病虫高发。','立秋':'秋季开始，玉米灌浆期加强管理。','处暑':'暑热渐消，秋作物陆续成熟。','白露':'露水增多，秋收在即，检查收获机械。','秋分':'秋收秋种关键期，收玉米播小麦。','寒露':'气温下降，冬小麦播种最佳窗口。','霜降':'初霜将至，秋收扫尾，深翻施底肥。','立冬':'冬季开始，冬小麦越冬准备。','小雪':'降温明显，做好冬灌和防冻覆盖。','大雪':'天寒多雪，加强设施管理防雪防冻。','冬至':'阴极阳生，检查越冬情况，补施腊肥。'};
+    return m[name]||'根据天气合理安排农事。';
+}
+
+// ★ 核心：构建日历
+function buildCal(){
+    const now=new Date();
+    if(calYear===null){calYear=now.getFullYear();calMonth=now.getMonth()}
+    const y=calYear,mo=calMonth;
+    const firstDay=new Date(y,mo,1).getDay();
+    const daysInMonth=new Date(y,mo+1,0).getDate();
+    const prevDays=new Date(y,mo,0).getDate();
+    const isCur=(y===now.getFullYear()&&mo===now.getMonth());
+    const today=now.getDate();
+    const jqMap={};getJQ(y).filter(j=>j.m===mo+1).forEach(j=>{jqMap[j.d]=j.n});
+    const taskDays=new Set([5,10,15,20,25]);
+
+    let h='<div class="cal-wrap">';
+    // 导航
+    h+=`<div class="cal-nav"><div style="display:flex;gap:4px"><button class="cal-nav-btn" onclick="calPrevYear()" title="上一年"><i class="fas fa-angle-double-left"></i></button><button class="cal-nav-btn" onclick="calPrevMonth()" title="上月"><i class="fas fa-angle-left"></i></button></div><span class="cal-title" onclick="calGoToday()" title="回到今天">${y}年${mo+1}月</span><div style="display:flex;gap:4px"><button class="cal-nav-btn" onclick="calNextMonth()" title="下月"><i class="fas fa-angle-right"></i></button><button class="cal-nav-btn" onclick="calNextYear()" title="下一年"><i class="fas fa-angle-double-right"></i></button></div></div>`;
+    // 星期
+    h+='<div class="cal-grid">';
+    ['日','一','二','三','四','五','六'].forEach(d=>{h+=`<div class="cal-wk">${d}</div>`});
+    // 上月填充
+    for(let i=firstDay-1;i>=0;i--){
+        const d=prevDays-i;let pm=mo-1,py=y;if(pm<0){pm=11;py--}
+        h+=`<div class="cal-day other" onclick="calClickOther(${py},${pm},${d})">${d}</div>`;
+    }
+    // 本月
+    for(let d=1;d<=daysInMonth;d++){
+        let cls='cal-day';
+        if(isCur&&d===today)cls+=' today';
+        if(calSelected&&calSelected.y===y&&calSelected.m===mo&&calSelected.d===d)cls+=' selected';
+        if(jqMap[d])cls+=' jq';
+        if(taskDays.has(d))cls+=' has-task';
+        const ja=jqMap[d]?` data-jq="${jqMap[d]}"`:'';
+        h+=`<div class="${cls}"${ja} onclick="calClickDay(${y},${mo},${d})">${d}</div>`;
+    }
+    // 下月填充
+    const total=firstDay+daysInMonth,rows=Math.ceil(total/7),need=rows*7;
+    for(let i=1;i<=need-total;i++){
+        let nm=mo+1,ny=y;if(nm>11){nm=0;ny++}
+        h+=`<div class="cal-day other" onclick="calClickOther(${ny},${nm},${i})">${i}</div>`;
+    }
+    h+='</div>'; // grid
+
+    // 信息面板
+    h+='<div class="cal-info">';
+    if(calSelected&&calSelected.y===y&&calSelected.m===mo){
+        const sd=calSelected.d,dt=new Date(y,mo,sd);
+        const wk=['周日','周一','周二','周三','周四','周五','周六'][dt.getDay()];
+        h+=`<div style="font-weight:600;margin-bottom:6px;font-size:13px">📅 ${y}年${mo+1}月${sd}日 ${wk}`;
+        if(jqMap[sd])h+=` <span class="cal-jq-tag">🌿 ${jqMap[sd]}</span>`;
+        if(taskDays.has(sd))h+=` <span class="cal-task-tag">📋 农事日</span>`;
+        if(isCur&&sd===today)h+=` <span style="display:inline-block;padding:1px 6px;background:var(--pl);color:var(--primary);border-radius:3px;font-size:10px;margin-left:4px">今天</span>`;
+        h+='</div>';
+        if(jqMap[sd]){h+=`<div style="color:var(--success);margin-bottom:4px">🌿 <strong>${jqMap[sd]}</strong></div><div style="font-size:11px;color:#555;line-height:1.8;margin-bottom:4px">${getJQAdvice(jqMap[sd])}</div>`}
+        const diff=Math.round((dt-now)/864e5);
+        if(diff>0)h+=`<div style="font-size:11px;color:var(--ts)">⏰ ${diff}天后</div>`;
+        else if(diff<0)h+=`<div style="font-size:11px;color:var(--ts)">⏰ ${Math.abs(diff)}天前</div>`;
+        h+=`<div style="margin-top:6px;font-size:11px;color:var(--ts)">📋 本月：${FARM_TASKS[mo+1].join('、')}</div>`;
+    }else{
+        const jl=getJQ(y).filter(j=>j.m===mo+1);
+        h+=`<div style="font-weight:600;margin-bottom:6px;font-size:13px">📅 ${y}年${mo+1}月概览</div>`;
+        if(jl.length)h+=`<div style="margin-bottom:4px">🌿 ${jl.map(j=>`<span class="cal-jq-tag">${j.n}(${j.d}日)</span>`).join(' ')}</div>`;
+        h+=`<div style="font-size:11px;color:var(--ts)">📋 ${FARM_TASKS[mo+1].join('、')}</div>`;
+        h+=`<div style="font-size:11px;color:#bbb;margin-top:4px">💡 点击日期查详情 · 点击标题回今天</div>`;
+    }
+    h+='</div></div>';
+    document.getElementById('calB').innerHTML=h;
+}
+
+// ★ 翻页函数（独立声明）
+function calPrevYear(){calYear--;calSelected=null;buildCal()}
+function calNextYear(){calYear++;calSelected=null;buildCal()}
+function calPrevMonth(){calMonth--;if(calMonth<0){calMonth=11;calYear--}calSelected=null;buildCal()}
+function calNextMonth(){calMonth++;if(calMonth>11){calMonth=0;calYear++}calSelected=null;buildCal()}
+function calGoToday(){const n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();calSelected={y:calYear,m:calMonth,d:n.getDate()};buildCal()}
+function calClickDay(y,m,d){if(calSelected&&calSelected.y===y&&calSelected.m===m&&calSelected.d===d)calSelected=null;else calSelected={y,m,d};buildCal()}
+function calClickOther(y,m,d){calYear=y;calMonth=m;calSelected={y,m,d};buildCal()}
+
+// ============================================
+//  地图
+// ============================================
+let map,fieldGrp,heatGrp,droneM,droneFlying=false,mapOk=false;
+const CEN=[34.745,113.625],IB=[[34.715,113.585],[34.775,113.665]];
+function initMap(){const d=document.createElement('div');d.id='theMap';d.style.cssText='width:100%;height:100%;min-height:400px';document.getElementById('mapC').appendChild(d);map=L.map('theMap',{zoomControl:true,attributionControl:false}).setView(CEN,14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);fieldGrp=L.layerGroup().addTo(map);heatGrp=L.layerGroup();for(let i=2;i<10;i++)for(let j=2;j<10;j++){let r=Math.random(),c=r>.8?'#ff4d4f':r>.5?'#faad14':'#52c41a';L.rectangle([[34.725+i*.04/12,113.6+j*.05/12],[34.725+(i+1)*.04/12,113.6+(j+1)*.05/12]],{color:'transparent',fillColor:c,fillOpacity:.5}).addTo(heatGrp)}droneM=L.marker(CEN,{icon:L.divIcon({html:'<i class="fas fa-plane" style="color:#1677ff;font-size:22px"></i>',className:'',iconSize:[22,22]})}).addTo(map);droneM.setOpacity(0);if(!G.fields.length){G.fields.push({id:1,name:'A-01示范田',area:'1250.0',color:'#1677ff',latlngs:[[34.76,113.60],[34.765,113.64],[34.735,113.65],[34.725,113.61]],visible:true});saveData()}renderFields();map.on('click',e=>{if(!isDraw)return;drawPts.push([e.latlng.lat,e.latlng.lng]);L.circleMarker(e.latlng,{radius:5,color:'#ff4d4f',fillColor:'#ff4d4f',fillOpacity:1}).addTo(drawLy);if(drawPts.length>1){if(drawPo)drawLy.removeLayer(drawPo);drawPo=L.polygon([...drawPts],{color:'#ff4d4f',weight:2,dashArray:'6',fillOpacity:.15}).addTo(drawLy)}})}
+function chgLy(t,b){document.querySelectorAll('.mt .btn:not(.bp)').forEach(x=>x.classList.remove('active'));b.classList.add('active');map.removeLayer(heatGrp);if(t==='ndvi')map.addLayer(heatGrp)}
+function upImg(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const id=Date.now(),l=L.imageOverlay(ev.target.result,IB,{opacity:.85,zIndex:400}).addTo(map),bd=L.rectangle(IB,{color:'#1677ff',weight:3,fillOpacity:0,dashArray:'8'}).addTo(map);G.images.push({id,name:f.name,url:ev.target.result,layer:l,border:bd,visible:true,opacity:.85});rnImgL();map.fitBounds(IB);toast('上传成功！','success')};r.readAsDataURL(f);e.target.value=''}
+function rnImgL(){const c=document.getElementById('imgL');if(!G.images.length){c.innerHTML='<div style="text-align:center;color:var(--ts);padding:20px;font-size:12px">暂无</div>';return}c.innerHTML=G.images.map(i=>`<div class="ii"><img class="ip" src="${i.url}"><div class="iif"><div class="iin">${i.name}</div><input type="range" min="10" max="100" value="${Math.round(i.opacity*100)}" oninput="G.images.find(x=>x.id===${i.id}).opacity=this.value/100;G.images.find(x=>x.id===${i.id}).layer.setOpacity(this.value/100)" style="width:100%;accent-color:var(--primary)"><div style="display:flex;gap:4px;margin-top:4px"><button class="btn bsm" onclick="tgImg(${i.id})"><i class="fas fa-${i.visible?'eye':'eye-slash'}"></i></button><button class="btn bsm bd" onclick="dlImg(${i.id})"><i class="fas fa-trash"></i></button></div></div></div>`).join('')}
+function tgImg(id){const i=G.images.find(x=>x.id===id);i.visible=!i.visible;i.visible?[i.layer.addTo(map),i.border.addTo(map)]:[map.removeLayer(i.layer),map.removeLayer(i.border)];rnImgL()}
+function dlImg(id){const i=G.images.find(x=>x.id===id);if(i){map.removeLayer(i.layer);map.removeLayer(i.border)}G.images=G.images.filter(x=>x.id!==id);rnImgL()}
+function flyDrone(){if(droneFlying)return;droneFlying=true;document.getElementById('drBtn').innerHTML='<i class="fas fa-sync fa-spin"></i> 航测中';droneM.setOpacity(1);let a=0;const t=setInterval(()=>{a+=.1;droneM.setLatLng([CEN[0]+Math.sin(a)*.015,CEN[1]+Math.cos(a)*.02]);if(a>Math.PI*2){clearInterval(t);droneM.setOpacity(0);document.getElementById('drBtn').innerHTML='<i class="fas fa-plane"></i> 无人机';droneFlying=false;toast('航测完成！','success')}},80)}
+
+// ============================================
+//  地块管理
+// ============================================
+function renderFields(){fieldGrp.clearLayers();G.fields.forEach(f=>{if(f.visible!==false){f._layer=L.polygon(f.latlngs,{color:f.color,weight:3,fillOpacity:.2}).addTo(fieldGrp);f._layer.bindTooltip(f.name,{permanent:true,direction:'center',className:'ft'})}});const l=document.getElementById('fList');document.getElementById('fCnt').textContent=G.fields.length;if(!l)return;l.innerHTML=G.fields.map(f=>`<div class="fli" onclick="locF(${f.id})"><div class="fc" style="background:${f.color}"></div><div class="fd2"><h4>${f.name}</h4><p>${f.area}亩${getFD(f.name)}</p></div><div style="display:flex;gap:3px" onclick="event.stopPropagation()"><button class="btn bsm" onclick="renF(${f.id})"><i class="fas fa-edit"></i></button><button class="btn bsm bd" onclick="delF(${f.id})"><i class="fas fa-trash"></i></button></div></div>`).join('')}
+function getFD(fn){if(!G.TD.r.length)return'';const fi=G.TD.h.findIndex(h=>h.includes('地块'));if(fi<0)return'';const rs=G.TD.r.filter(r=>r[fi]&&fn.includes(r[fi]));if(!rs.length)return'';const yi=G.TD.h.findIndex(h=>h.includes('产量'));if(yi>=0){const a=(rs.reduce((s,r)=>s+parseFloat(r[yi]||0),0)/rs.length).toFixed(0);return` · 均产${a}kg`}return` · ${rs.length}条`}
+function locF(id){const f=G.fields.find(x=>x.id===id);if(f&&f._layer)map.flyToBounds(f._layer.getBounds(),{padding:[50,50]})}
+function renF(id){const f=G.fields.find(x=>x.id===id);const n=prompt('名称:',f.name);if(n){f.name=n;syncAll()}}
+function delF(id){if(!confirm('删除？'))return;G.fields=G.fields.filter(x=>x.id!==id);syncAll()}
+function aiField(){const id=Date.now(),c=map.getCenter(),o=.008,cs=['#1677ff','#52c41a','#faad14','#722ed1','#13c2c2'];G.fields.push({id,name:'AI-'+id.toString().slice(-3),area:(100+Math.random()*300).toFixed(1),color:cs[Math.floor(Math.random()*cs.length)],latlngs:[[c.lat+o,c.lng-o],[c.lat+o,c.lng+o],[c.lat-o,c.lng+o],[c.lat-o,c.lng-o]],visible:true});syncAll();locF(id);toast('AI提取！','success')}
+let isDraw=false,drawPts=[],drawLy,drawPo;
+function startDraw(){isDraw=true;drawPts=[];if(drawLy)map.removeLayer(drawLy);drawLy=L.layerGroup().addTo(map);drawPo=null;document.getElementById('drawBar').classList.remove('hd');document.getElementById('theMap').style.cursor='crosshair'}
+function canDraw(){isDraw=false;drawPts=[];if(drawLy)map.removeLayer(drawLy);document.getElementById('drawBar').classList.add('hd');document.getElementById('theMap').style.cursor=''}
+function finDraw(){if(drawPts.length<3){toast('至少3点','error');return}const id=Date.now();let a=0;const p=drawPts;for(let i=0;i<p.length;i++){let j=(i+1)%p.length;a+=p[i][1]*p[j][0]-p[j][1]*p[i][0]}a=Math.abs(a)/2*111e3*111e3/666.67;G.fields.push({id,name:'M-'+id.toString().slice(-3),area:a.toFixed(1),color:['#1677ff','#52c41a','#faad14'][Math.floor(Math.random()*3)],latlngs:[...drawPts],visible:true});canDraw();syncAll();locF(id);toast('创建！','success')}
+
+// ============================================
+//  数据管理
+// ============================================
+function upData(e){const f=e.target.files[0];if(!f)return;const ext=f.name.split('.').pop().toLowerCase();if(ext==='csv'){const r=new FileReader();r.onload=ev=>{const ls=ev.target.result.split('\n').filter(l=>l.trim());if(ls.length<2)return;G.TD.h=ls[0].split(',').map(h=>h.trim().replace(/"/g,''));G.TD.r=ls.slice(1).map(l=>l.split(',').map(c=>c.trim().replace(/"/g,'')));syncAll();toast(`导入${G.TD.r.length}条！`,'success')};r.readAsText(f)}else{const r=new FileReader();r.onload=ev=>{const wb=XLSX.read(ev.target.result,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],j=XLSX.utils.sheet_to_json(ws,{header:1});if(j.length<2)return;G.TD.h=j[0].map(String);G.TD.r=j.slice(1).map(r=>r.map(c=>c!=null?String(c):''));syncAll();toast(`导入${G.TD.r.length}条！`,'success')};r.readAsArrayBuffer(f)}e.target.value=''}
+function loadSample(){G.TD.h=['农户ID','姓名','地块','面积(亩)','土壤pH','有机质(g/kg)','含水率(%)','氮(mg/kg)','磷(mg/kg)','钾(mg/kg)','产量(kg/亩)','施肥(kg/亩)','评价'];const ns='张建国,李秀芳,王大山,赵明远,刘翠花,陈志强,杨秋月,黄德旺,周丽萍,吴光明,孙福来,马春花,朱国庆,林小英,郑大力,何美玲,谢永康,罗建华,唐丽娟,曹国栋'.split(',');const gs=['优秀','优良','良好','中等','较差','差'];G.TD.r=ns.map((n,i)=>{const ph=+(5.2+Math.random()*3).toFixed(1),om=+(7+Math.random()*19).toFixed(1),wc=+(20+Math.random()*40).toFixed(1),N=+(55+Math.random()*140).toFixed(0),P=+(8+Math.random()*30).toFixed(0),K=+(50+Math.random()*130).toFixed(0),y=+(280+Math.random()*380).toFixed(0),ft=+(28+Math.random()*25).toFixed(1),gi=ph>7.5||ph<5.5||om<10||wc<30?4:y>550?0:y>480?1:y>400?2:3;return['NH'+(1001+i),n,`${String.fromCharCode(65+i%8)}-${Math.floor(i/8)+1}`,(50+Math.random()*250).toFixed(1),ph,om,wc,N,P,K,y,ft,gs[Math.min(gi,5)]]});syncAll();toast('已加载20条！','success')}
+function renderTable(){if(!G.TD.h.length){document.getElementById('tBox').innerHTML='<div style="text-align:center;color:var(--ts);padding:40px">暂无</div>';document.getElementById('dInfo').textContent='';return}document.getElementById('dInfo').textContent=`${G.TD.r.length}×${G.TD.h.length}`;let h='<table class="dt"><thead><tr><th>#</th>'+G.TD.h.map(hh=>`<th>${hh}</th>`).join('')+'</tr></thead><tbody>';G.TD.r.forEach((r,ri)=>{h+=`<tr><td>${ri+1}</td>`+r.map((c,ci)=>`<td class="editable" ondblclick="editCell(this,${ri},${ci})">${c}</td>`).join('')+'</tr>'});h+='</tbody></table>';document.getElementById('tBox').innerHTML=h;updStats()}
+function editCell(td,ri,ci){const old=td.textContent;const inp=document.createElement('input');inp.className='edit-input';inp.value=old;td.innerHTML='';td.appendChild(inp);inp.focus();inp.select();function save(){G.TD.r[ri][ci]=inp.value.trim();td.textContent=inp.value.trim();syncAll();toast('已同步','success')}inp.onblur=save;inp.onkeydown=e=>{if(e.key==='Enter')save();if(e.key==='Escape')td.textContent=old}}
+function updStats(){const nc=getNC();let sh='';nc.slice(0,6).forEach(c=>{const avg=(c.vals.reduce((a,b)=>a+b,0)/c.vals.length).toFixed(1);sh+=`<div class="ms"><div class="v">${avg}</div><div class="l">${c.name}(均)</div></div>`});document.getElementById('dStats').innerHTML=sh||'<div style="color:var(--ts);padding:12px;grid-column:span 2;text-align:center">无</div>';if(nc.length>=2){const cv=document.getElementById('dChart');cv.style.display='block';if(G.charts.data)G.charts.data.destroy();const c1=nc[Math.min(3,nc.length-1)],c2=nc[nc.length-1];G.charts.data=new Chart(cv,{type:'bar',data:{labels:G.TD.r.map(r=>r[1]||r[0]).slice(0,15),datasets:[{label:c1.name,data:c1.vals.slice(0,15),backgroundColor:'rgba(22,119,255,.6)'},{label:c2.name,data:c2.vals.slice(0,15),backgroundColor:'rgba(82,196,26,.6)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{x:{ticks:{font:{size:8}}}}}})}else document.getElementById('dChart').style.display='none'}
+function clrData(){G.TD={h:[],r:[]};G.fullRpt='';document.getElementById('aiSum').innerHTML='<div style="text-align:center;color:var(--ts);padding:20px">无</div>';syncAll();toast('已清空','warn')}
+function expCSV(){if(!G.TD.h.length){toast('无数据','warn');return}let csv=G.TD.h.join(',')+'\n';G.TD.r.forEach(r=>{csv+=r.join(',')+'\n'});const b=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='农户数据_'+new Date().toLocaleDateString()+'.csv';a.click();toast('导出！','success')}
+
+// ============================================
+//  AI分析
+// ============================================
+function runAI(){if(!G.TD.r.length){toast('先导入','warn');return}G.aiCnt++;const sum=document.getElementById('aiSum');sum.innerHTML='<div style="text-align:center;padding:30px"><span class="td2"></span><span class="td2"></span><span class="td2"></span></div>';setTimeout(()=>{const nc=getNC(),n=G.TD.r.length,now=new Date().toLocaleString();let rpt=`<div class="rh"><h2>🌾 AI深度分析报告</h2><p>${now} | ${n}条×${G.TD.h.length}维</p></div>`;const phC=nc.find(c=>c.name.includes('pH')),yC=nc.find(c=>c.name.includes('产量')),wC=nc.find(c=>c.name.includes('含水')),fC=nc.find(c=>c.name.includes('施肥'));rpt+=`<div class="rs"><h3>一、KPI</h3><div class="rk">`;if(phC)rpt+=`<div class="rki"><div class="v">${(phC.vals.reduce((a,b)=>a+b,0)/phC.vals.length).toFixed(2)}</div><div class="l">pH</div></div>`;if(yC)rpt+=`<div class="rki"><div class="v">${(yC.vals.reduce((a,b)=>a+b,0)/yC.vals.length).toFixed(0)}</div><div class="l">均产</div></div>`;if(wC)rpt+=`<div class="rki"><div class="v">${(wC.vals.reduce((a,b)=>a+b,0)/wC.vals.length).toFixed(1)}%</div><div class="l">含水率</div></div>`;if(fC)rpt+=`<div class="rki"><div class="v">${(fC.vals.reduce((a,b)=>a+b,0)/fC.vals.length).toFixed(1)}</div><div class="l">施肥</div></div>`;rpt+=`</div></div>`;rpt+=`<div class="rs"><h3>二、统计</h3><table class="rt"><tr><th>指标</th><th>最小</th><th>最大</th><th>均值</th><th>标准差</th></tr>`;nc.forEach(c=>{const s=[...c.vals].sort((a,b)=>a-b),avg=c.vals.reduce((a,b)=>a+b,0)/c.vals.length,std=Math.sqrt(c.vals.reduce((x,v)=>x+(v-avg)**2,0)/c.vals.length);rpt+=`<tr><td><strong>${c.name}</strong></td><td>${s[0].toFixed(1)}</td><td>${s[s.length-1].toFixed(1)}</td><td style="color:var(--primary);font-weight:bold">${avg.toFixed(1)}</td><td>${std.toFixed(2)}</td></tr>`});rpt+=`</table></div>`;let al=0;rpt+=`<div class="rs"><h3>三、预警</h3>`;if(phC){const ac=phC.vals.filter(v=>v<5.5).length;if(ac){rpt+=`<div class="ra rad">⚠️ ${ac}地块pH偏酸</div>`;al++}}if(wC){const dr=wC.vals.filter(v=>v<30).length;if(dr){rpt+=`<div class="ra rad">🏜️ ${dr}地块偏干</div>`;al++}}if(!al)rpt+=`<div class="ra ras">✅ 正常</div>`;G.alertCnt=al;rpt+=`</div>`;rpt+=`<div class="rs"><h3>四、处方</h3><table class="rt"><tr><th>类型</th><th>高产</th><th>中产</th><th>低产</th></tr><tr><td>尿素</td><td>12-15</td><td>18-22</td><td>25-30</td></tr><tr><td>磷酸二铵</td><td>8-10</td><td>12-15</td><td>18-20</td></tr></table></div>`;G.fullRpt=rpt;let s=`<div style="border-left:3px solid var(--primary);padding-left:10px;margin-bottom:10px"><strong style="color:var(--primary)">✅ 完成</strong></div>📊 ${n}条 ${nc.length}指标<br>⚠️ <strong style="color:var(--danger)">${al}</strong>项预警<br>`;if(yC)s+=`🌾 均产<strong>${(yC.vals.reduce((a,b)=>a+b,0)/yC.vals.length).toFixed(0)}</strong>kg/亩<br>`;s+=`<div style="margin-top:10px;padding:8px;background:var(--pl);border-radius:4px;font-size:11px">💡 "预览"查看完整报告</div>`;sum.innerHTML=s;syncAll();toast('报告已生成！','success')},2500)}
+function prevRpt(){if(!G.fullRpt){toast('先AI分析','warn');return}document.getElementById('rptBody').innerHTML=G.fullRpt;document.getElementById('rptM').classList.add('show')}
+function closeRpt(){document.getElementById('rptM').classList.remove('show')}
+function printRpt(){if(!G.fullRpt)return;const w=window.open('','_blank');w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>报告</title><style>body{font-family:sans-serif;max-width:850px;margin:40px auto;padding:20px;color:#333;line-height:1.8}h2{color:#1677ff;text-align:center}h3{color:#1677ff;border-left:3px solid #1677ff;padding-left:10px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#1677ff;color:#fff;padding:8px}td{padding:7px;border:1px solid #e8e8e8;text-align:center}.rh{text-align:center;border-bottom:2px solid #1677ff;padding-bottom:16px;margin-bottom:24px}.ra{padding:12px;border-radius:6px;margin:8px 0}.rad{background:#fff2f0;border-left:4px solid #ff4d4f}.ras{background:#f6ffed;border-left:4px solid #52c41a}.rk{display:flex;gap:16px;margin:10px 0}.rki{flex:1;text-align:center;padding:12px;background:#f0f2f5;border-radius:6px}.rki .v{font-size:22px;font-weight:bold;color:#1677ff}.rki .l{font-size:11px;color:#8c8c8c;margin-top:4px}</style></head><body>${G.fullRpt}</body></html>`);w.document.close();w.print()}
+function dlRpt(){if(!G.fullRpt){toast('先AI分析','warn');return}const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>报告</title><style>body{font-family:sans-serif;max-width:850px;margin:40px auto;padding:20px;color:#333;line-height:1.8}h2{color:#1677ff;text-align:center}h3{color:#1677ff;border-left:3px solid #1677ff;padding-left:10px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#1677ff;color:#fff;padding:8px}td{padding:7px;border:1px solid #e8e8e8;text-align:center}.rh{text-align:center;border-bottom:2px solid #1677ff;padding-bottom:16px;margin-bottom:24px}.ra{padding:12px;border-radius:6px;margin:8px 0}.rad{background:#fff2f0;border-left:4px solid #ff4d4f}.ras{background:#f6ffed;border-left:4px solid #52c41a}.rk{display:flex;gap:16px;margin:10px 0}.rki{flex:1;text-align:center;padding:12px;background:#f0f2f5;border-radius:6px}.rki .v{font-size:22px;font-weight:bold;color:#1677ff}.rki .l{font-size:11px;color:#8c8c8c;margin-top:4px}</style></head><body>${G.fullRpt}</body></html>`;const b=new Blob([html],{type:'text/html;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='AI报告_'+new Date().toLocaleDateString()+'.html';a.click();toast('导出！','success')}
+
+// ============================================
+//  AI对话
+// ============================================
+function aiFile(e){const f=e.target.files[0];if(!f)return;const ext=f.name.split('.').pop().toLowerCase();const type={jpg:'image',jpeg:'image',png:'image',csv:'table',xlsx:'table',xls:'table',txt:'doc',pdf:'doc'}[ext]||'other';G.aiFiles.push({id:Date.now(),name:f.name,size:f.size,type,status:'完成'});rnAIF();const ms=document.getElementById('chatMs');ms.innerHTML+=`<div class="cm u"><div class="ca hu"><i class="fas fa-user"></i></div><div class="cbb">📎 ${f.name}</div></div><div class="cm" id="aiTp"><div class="ca ai"><i class="fas fa-robot"></i></div><div class="cbb"><span class="td2"></span><span class="td2"></span><span class="td2"></span></div></div>`;ms.scrollTop=ms.scrollHeight;const rd=new FileReader();rd.onload=()=>{setTimeout(()=>{document.getElementById('aiTp')?.remove();const dn=G.TD.r.length?`<br>📊 已关联${G.TD.r.length}条数据`:'';let r='';if(type==='image')r=`📸 覆盖度${(60+Math.random()*30).toFixed(0)}%，NDVI ${(.4+Math.random()*.4).toFixed(2)}${dn}`;else if(type==='table')r=`📊 表格已接收，建议到"农户数据"导入${dn}`;else r=`📄 文档已分析${dn}`;G.aiCnt++;syncAll();ms.innerHTML+=`<div class="cm"><div class="ca ai"><i class="fas fa-robot"></i></div><div class="cbb">${r}</div></div>`;ms.scrollTop=ms.scrollHeight},2000)};if(type==='image'||ext==='csv'||ext==='txt')rd.readAsDataURL(f);else rd.readAsArrayBuffer(f);e.target.value=''}
+function rnAIF(){const c=document.getElementById('aiFL');if(!G.aiFiles.length){c.innerHTML='<div style="text-align:center;color:var(--ts);font-size:12px;padding:12px">暂无</div>';return}const ic={image:{i:'fa-image',bg:'var(--sl)',c:'var(--success)'},table:{i:'fa-table',bg:'var(--pl)',c:'var(--primary)'},doc:{i:'fa-file-alt',bg:'var(--wl)',c:'var(--warn)'},other:{i:'fa-file',bg:'var(--bg)',c:'var(--ts)'}};c.innerHTML=G.aiFiles.map(f=>{const s=ic[f.type]||ic.other;return`<div class="fii"><div class="fic" style="background:${s.bg};color:${s.c}"><i class="fas ${s.i}"></i></div><div class="finfo"><div class="nm">${f.name}</div><div class="mt3">${fmtSz(f.size)}</div></div><span class="tag tgs">${f.status}</span></div>`}).join('')}
+function chat(){const input=document.getElementById('chatI'),msg=input.value.trim();if(!msg)return;input.value='';const ms=document.getElementById('chatMs');ms.innerHTML+=`<div class="cm u"><div class="ca hu"><i class="fas fa-user"></i></div><div class="cbb">${msg}</div></div><div class="cm" id="aiT2"><div class="ca ai"><i class="fas fa-robot"></i></div><div class="cbb"><span class="td2"></span><span class="td2"></span><span class="td2"></span></div></div>`;ms.scrollTop=ms.scrollHeight;setTimeout(()=>{document.getElementById('aiT2')?.remove();const nc=getNC(),has=G.TD.r.length>0,l=msg.toLowerCase();let r='';
+if(l.includes('天气')){if(G.weather){const c=G.weather.current;r=`🌤️ ${weatherText[String(c.weather_code)]||'多云'}，${Math.round(c.temperature_2m)}°C，湿度${c.relative_humidity_2m}%，风${c.wind_speed_10m}km/h`;const d=G.weather.daily;if(d&&d.time.length>1)r+=`<br>明天：${Math.round(d.temperature_2m_min[1])}°~${Math.round(d.temperature_2m_max[1])}°`}else r='天气加载中...'}
+else if(l.includes('土壤')||l.includes('ph')){const p=nc.find(c=>c.name.includes('pH'));if(p){const avg=(p.vals.reduce((a,b)=>a+b,0)/p.vals.length).toFixed(2);r=`📊 pH ${Math.min(...p.vals).toFixed(1)}~${Math.max(...p.vals).toFixed(1)}，均<strong>${avg}</strong>`}else r='无pH数据'}
+else if(l.includes('产量')){const y=nc.find(c=>c.name.includes('产量'));if(y){const avg=(y.vals.reduce((a,b)=>a+b,0)/y.vals.length).toFixed(0);r=`🌾 均产<strong>${avg}</strong>kg/亩`}else r='无产量数据'}
+else if(l.includes('节气')){const now=new Date(),jq=getJQ(now.getFullYear()).filter(j=>j.m===now.getMonth()+1);r=jq.length?`🌿 本月：${jq.map(j=>`${j.n}(${j.d}日) — ${getJQAdvice(j.n)}`).join('<br>')}`:'本月无节气'}
+else if(l.includes('你好'))r='你好！'+(has?`已连接${G.TD.r.length}条数据。`:'建议先导入数据。');
+else r=has?`关于"${msg}"，建议运行AI分析获取报告。`:'建议先导入数据。';
+G.aiCnt++;syncAll();ms.innerHTML+=`<div class="cm"><div class="ca ai"><i class="fas fa-robot"></i></div><div class="cbb">${r}</div></div>`;ms.scrollTop=ms.scrollHeight},1500)}
+
+// ============================================
+//  水肥决策
+// ============================================
+function model(){const m=+document.getElementById('iM').value,ph=+document.getElementById('iPH').value/10,r=+document.getElementById('iR').value;document.getElementById('vM').textContent=m+'%';document.getElementById('vPH').textContent=ph.toFixed(1);document.getElementById('vR').textContent=r+'%';let h='';if(r>50)h='<div style="background:var(--wl);border-left:4px solid var(--warn);padding:14px;border-radius:4px">⚠️ 降雨'+r+'%推迟</div>';else if(m<35)h='<div style="background:var(--pl);border-left:4px solid var(--primary);padding:14px;border-radius:4px">💧 墒情不足('+m+'%)，灌45m³/亩</div>';else if(m>75)h='<div style="background:var(--dl);border-left:4px solid var(--danger);padding:14px;border-radius:4px">🚨 排涝('+m+'%)</div>';else h='<div style="background:var(--sl);border-left:4px solid var(--success);padding:14px;border-radius:4px">✅ 适宜('+m+'%)</div>';if(ph<5.5)h+='<div style="background:var(--dl);border-left:4px solid var(--danger);padding:14px;border-radius:4px;margin-top:8px">pH偏酸'+ph.toFixed(1)+'</div>';else if(ph>8)h+='<div style="background:var(--wl);border-left:4px solid var(--warn);padding:14px;border-radius:4px;margin-top:8px">pH偏碱'+ph.toFixed(1)+'</div>';document.getElementById('decO').innerHTML=h;if(G.charts.radar)G.charts.radar.destroy();const nc=getNC();const wV=nc.find(c=>c.name.includes('含水'))?Math.min(100,(nc.find(c=>c.name.includes('含水')).vals.reduce((a,b)=>a+b,0)/nc.find(c=>c.name.includes('含水')).vals.length)*2):m*2;G.charts.radar=new Chart(document.getElementById('radC'),{type:'radar',data:{labels:['水分','氮','磷','钾','pH'],datasets:[{data:[Math.min(100,wV),nc.find(c=>c.name.includes('氮'))?Math.min(100,nc.find(c=>c.name.includes('氮')).vals.reduce((a,b)=>a+b,0)/nc.find(c=>c.name.includes('氮')).vals.length/2):65,nc.find(c=>c.name.includes('磷'))?Math.min(100,nc.find(c=>c.name.includes('磷')).vals.reduce((a,b)=>a+b,0)/nc.find(c=>c.name.includes('磷')).vals.length*3):55,nc.find(c=>c.name.includes('钾'))?Math.min(100,nc.find(c=>c.name.includes('钾')).vals.reduce((a,b)=>a+b,0)/nc.find(c=>c.name.includes('钾')).vals.length*.7):60,Math.max(0,100-Math.abs(ph-6.8)*20)],backgroundColor:'rgba(22,119,255,.2)',borderColor:'#1677ff',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{ticks:{display:false},max:100}}}})}
+
+// ============================================
+//  初始化
+// ============================================
+function initDash(){
+    document.getElementById('dashDt').textContent=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+    syncDash();buildCal();fetchWeather();
+    document.getElementById('actL').innerHTML=[{c:'var(--primary)',t:'数据已同步',time:'刚刚'},{c:'var(--success)',t:'AI报告生成',time:'1h'},{c:'var(--warn)',t:'NDVI异常',time:'3h'},{c:'var(--danger)',t:'探头电量低',time:'昨天'}].map(a=>`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5"><div style="width:8px;height:8px;border-radius:50%;background:${a.c};margin-top:5px"></div><div><div style="font-size:12px">${a.t}</div><div style="font-size:11px;color:var(--ts)">${a.time}</div></div></div>`).join('');
+    document.getElementById('qQ').innerHTML=['当前天气','土壤pH','产量统计','本月节气','施肥建议','上传文件','生成报告'].map(q=>`<button class="btn bsm" onclick="document.getElementById('chatI').value='${q}';chat()">${q}</button>`).join('');
+    if(G.charts.aiCh)G.charts.aiCh.destroy();
+    const nc=getNC();
+    if(nc.length>=2){const c1=nc[0],c2=nc[Math.min(1,nc.length-1)];G.charts.aiCh=new Chart(document.getElementById('aiCh'),{type:'scatter',data:{datasets:[{label:`${c1.name} vs ${c2.name}`,data:c1.vals.map((v,i)=>({x:v,y:c2.vals[i]||0})),backgroundColor:'rgba(22,119,255,.5)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}})}
+    else{G.charts.aiCh=new Chart(document.getElementById('aiCh'),{type:'doughnut',data:{labels:['健康','水分','养分','风险'],datasets:[{data:[85,78,62,15],backgroundColor:['#52c41a','#1677ff','#faad14','#ff4d4f']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}})}
+}
+function initNotifs(){document.getElementById('nfL').innerHTML=[{i:'fa-cloud-sun',bg:'var(--pl)',c:'var(--primary)',t:'天气更新',d:'实时天气已同步',time:'刚刚'},{i:'fa-sync',bg:'var(--sl)',c:'var(--success)',t:'数据同步',d:'全平台已更新',time:'10min'},{i:'fa-bolt',bg:'var(--dl)',c:'var(--danger)',t:'暴雨预警',d:'已拦截灌溉',time:'30min'}].map(n=>`<div class="ni"><div class="nic" style="background:${n.bg};color:${n.c}"><i class="fas ${n.i}"></i></div><div><div style="font-size:13px;font-weight:500">${n.t}</div><div style="font-size:12px;color:var(--ts)">${n.d}</div><div style="font-size:11px;color:#bfbfbf;margin-top:3px">${n.time}</div></div></div>`).join('')}
+function clrAll(){if(!confirm('确定？'))return;localStorage.removeItem('gd');G.images.forEach(i=>{if(i.layer)map.removeLayer(i.layer);if(i.border)map.removeLayer(i.border)});G.images=[];G.fields=[];G.TD={h:[],r:[]};G.fullRpt='';G.aiCnt=0;G.alertCnt=0;G.rptCnt=0;rnImgL();syncAll();toast('已清空','warn')}
+function addLog(t){const l=document.getElementById('logL');if(!l)return;const d=document.createElement('div');d.style.cssText='padding:5px 0;border-bottom:1px solid #f5f5f5';d.innerHTML=`<span style="color:var(--primary)">[${new Date().toLocaleTimeString()}]</span> ${t}`;l.insertBefore(d,l.firstChild);while(l.children.length>20)l.removeChild(l.lastChild)}
+function initApp(){
+    if(!mapOk){loadData();initMap();mapOk=true}
+    initDash();initNotifs();model();renderTable();rnImgL();rnAIF();
+    setInterval(()=>addLog(['RTK稳定','气象同步','传感器正常','AI就绪'][Math.floor(Math.random()*4)]),5e3);
+    setInterval(fetchWeather,600000);
+}
+const ss=document.createElement('style');ss.innerHTML=`.ft{background:rgba(22,119,255,.9)!important;border:none!important;box-shadow:none!important;color:#fff!important;font-size:11px!important;font-weight:600!important;padding:3px 6px!important;border-radius:3px!important}`;document.head.appendChild(ss);
+chkSess();
+</script>
+</body>
+</html>
